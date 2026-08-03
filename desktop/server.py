@@ -9,6 +9,7 @@
 """
 import json
 import os
+import re
 import sys
 import threading
 import urllib.parse
@@ -93,7 +94,11 @@ def build_messages(cfg, history):
 
 
 def chat_stream_yield(cfg, history, req_model=None):
-    url = (cfg.get("base_url") or "").rstrip("/") + "/chat/completions"
+    # 自动补全 /v1 路径（openai 兼容格式）
+    base = (cfg.get("base_url") or "").rstrip("/")
+    if not re.search(r"/v\d+$", base):
+        base += "/v1"
+    url = base + "/chat/completions"
     model = req_model or cfg.get("model") or "deepseek-chat"
     payload = {
         "model": model,
