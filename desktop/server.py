@@ -295,6 +295,12 @@ border-radius:14px;padding:11px 16px;font-size:13px;line-height:1.6;margin-botto
 @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
 .empty p{font-size:14px;line-height:1.9;color:#b9a7cc}
 @media(min-width:700px){.overlay{align-items:center}.sheet{border-radius:28px;max-height:86vh}}
+.session-item{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:12px 14px;border-radius:14px;background:#fdf9ff;border:2px solid var(--line);margin-bottom:8px;cursor:pointer;transition:.2s}
+.session-item.active{border-color:var(--pink);background:#fff0f6}
+.session-item:active{transform:scale(.98)}
+.session-title{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 100%}
+.session-meta{font-size:11px;color:var(--dim)}
+.session-del{font-size:15px;cursor:pointer;opacity:.55;padding:2px 6px}
 </style>
 </head>
 <body>
@@ -305,6 +311,7 @@ border-radius:14px;padding:11px 16px;font-size:13px;line-height:1.6;margin-botto
     <div class="title">🐱 喵酱 Chat</div>
     <div class="sub"><span class="dot"></span>猫娘 AI 陪伴助手 · v0.3.0</div>
   </div>
+  <button class="icon-btn" id="btnHistory" title="历史聊天">📜</button>
   <button class="icon-btn" id="btnSettings" title="设置">⚙️</button>
 </header>
 <main id="chatBox"></main>
@@ -319,6 +326,12 @@ border-radius:14px;padding:11px 16px;font-size:13px;line-height:1.6;margin-botto
   </div>
 </footer>
 
+<div class="overlay" id="historyPanel">
+  <div class="sheet">
+    <h2 style="display:flex;justify-content:space-between;align-items:center">📜 历史聊天 <button class="btn small ghost" id="btnNewSession" style="padding:6px 12px">➕ 新会话</button></h2>
+    <div id="sessionList" style="max-height:55vh;overflow-y:auto;margin-top:8px"></div>
+  </div>
+</div>
 <div class="overlay" id="settings">
   <div class="sheet">
     <h2>⚙️ 设置</h2>
@@ -341,6 +354,28 @@ border-radius:14px;padding:11px 16px;font-size:13px;line-height:1.6;margin-botto
         <img id="aiAvatarPrev" style="width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid var(--line);background:#f3ecff">
         <button type="button" class="btn small" style="flex:0 0 auto;padding:8px 14px" onclick="pickAiAvatar()">📷 上传 AI 头像</button>
         <button type="button" class="btn small ghost" style="flex:0 0 auto;padding:8px 14px" onclick="clearAiAvatar()">恢复默认</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>☁️ 云端同步（历史聊天备份）</label>
+      <input id="cfgSyncUrl" placeholder="云同步服务地址（可留空）" style="width:100%">
+      <div class="hint">💡 填入支持 GET/PUT 的 JSON 存储地址即可把历史聊天存到云端；留空则保存在本机</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <button type="button" class="btn small" onclick="cloudUpload()">⬆️ 上传云端</button>
+        <button type="button" class="btn small" onclick="cloudDownload()">⬇️ 云端恢复</button>
+        <button type="button" class="btn small ghost" onclick="exportBackup()">💾 导出备份</button>
+        <button type="button" class="btn small ghost" onclick="importBackup()">📂 导入备份</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>☁️ 云端同步（历史聊天备份）</label>
+      <input id="cfgSyncUrl" placeholder="云同步服务地址（可留空）" style="width:100%">
+      <div class="hint">💡 填入支持 GET/PUT 的 JSON 存储地址即可把历史聊天存到云端；留空则保存在本机</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <button type="button" class="btn small" onclick="cloudUpload()">⬆️ 上传云端</button>
+        <button type="button" class="btn small" onclick="cloudDownload()">⬇️ 云端恢复</button>
+        <button type="button" class="btn small ghost" onclick="exportBackup()">💾 导出备份</button>
+        <button type="button" class="btn small ghost" onclick="importBackup()">📂 导入备份</button>
       </div>
     </div>
     <div class="field">
@@ -408,6 +443,7 @@ const PRESETS=[
 {name:"自定义",base_url:"",model:"",reasoning:""}];
 const $=id=>document.getElementById(id);
 let cfg=null,history=[],busy=false,speaker=null;
+let sessions=[],curId=null;
 
 function effectiveModel(){
   if(cfg&&cfg.reasoning){
@@ -429,6 +465,7 @@ async function loadCfg(){
   $("cfgReasonModel").value=cfg.reasoning_model||"";
   $("avatarPrev").src=cfg.avatar||"";
   $("aiAvatarPrev").src=cfg.ai_avatar||"";
+  $("cfgSyncUrl").value=cfg.cloud_sync_url||"";
   $("cfgPrompt").value=cfg.prompt||"";
   $("cfgTemp").value=cfg.temperature||0.8;$("tempVal").textContent=cfg.temperature||0.8;
   $("cfgCtx").value=cfg.context_len||10;$("ctxVal").textContent=cfg.context_len||10;
@@ -520,6 +557,7 @@ async function send(){
   $("input").value="";autoGrow();
   addMsg("user",text);
   history.push({role:"user",content:text});
+  saveHistory();
   busy=true;$("btnSend").disabled=true;
   const ai=addMsg("ai","");ai.wrap.classList.add("typing");
   let acc="",reasoning="";
@@ -550,11 +588,13 @@ async function send(){
     ai.wrap.classList.remove("typing");
     if(!acc)ai.b.textContent="(喵？没有收到回复，检查一下 API 设置喵…)";
     history.push({role:"assistant",content:acc||"(空回复)"});
+    saveHistory();
     if(cfg&&cfg.voice&&acc)speak(acc,ai.wrap.voiceBtn);
   }catch(e){
     ai.wrap.classList.remove("typing");
     ai.b.textContent="[连接失败] "+e.message+"\n喵酱连不上服务器了呜…";
     history.push({role:"assistant",content:"[连接失败] "+e.message});
+    saveHistory();
   }
   busy=false;$("btnSend").disabled=false;
 }
@@ -571,12 +611,15 @@ $("rowMemory").onclick=()=>{const on=!isOn("swMemory");setSwitch("swMemory",on);
 $("rowVoice").onclick=()=>{setSwitch("swVoice",!isOn("swVoice"))};
 async function saveSettings(){
 $("btnSave").onclick=()=>saveSettings();
+$("btnHistory").onclick=()=>{renderSessions();$("historyPanel").classList.add("show")};
+$("btnNewSession").onclick=()=>{newSession(true)};
+$("historyPanel").onclick=e=>{if(e.target.id==="historyPanel")$("historyPanel").classList.remove("show")};
   try{
     cfg={base_url:$("cfgBaseUrl").value.trim(),api_key:$("cfgApiKey").value.trim(),
          model:$("cfgModel").value.trim(),prompt:$("cfgPrompt").value,
          temperature:parseFloat($("cfgTemp").value),unlimited_memory:isOn("swMemory"),context_len:parseInt($("cfgCtx").value),
          voice:isOn("swVoice"),reasoning:isOn("swReasoning"),reasoning_model:$("cfgReasonModel").value.trim(),
-         avatar:cfg.avatar||"",ai_avatar:cfg.ai_avatar||""};
+         avatar:cfg.avatar||"",ai_avatar:cfg.ai_avatar||"",cloud_sync_url:($("cfgSyncUrl").value||"").trim()};
     await api("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(cfg)});
     $("setupHint").style.display="none";
     $("settings").classList.remove("show");
@@ -650,13 +693,128 @@ function pickAiAvatar(){
   inp.click();
 }
 function clearAiAvatar(){cfg.ai_avatar="";$("aiAvatarPrev").src="";saveSettings();toast("已恢复默认 AI 头像")}
+// ================= 历史聊天 =================
+function loadSessions(){
+  try{sessions=JSON.parse(localStorage.getItem("neko_sessions"))||[]}catch(e){sessions=[]}
+  try{curId=localStorage.getItem("neko_cur_id")}catch(e){curId=null}
+  if(!sessions.length){newSession(false);return}
+  if(!sessions.find(s=>s.id===curId))curId=sessions[0].id;
+}
+function saveSessions(){localStorage.setItem("neko_sessions",JSON.stringify(sessions));if(curId)localStorage.setItem("neko_cur_id",curId)}
+function curSession(){return sessions.find(s=>s.id===curId)||sessions[0]}
+function saveHistory(){
+  const s=curSession();if(!s)return;
+  s.messages=history;s.updated_at=Date.now();
+  const first=history.find(m=>m.role==="user");
+  if(first&&(!s.title||s.title==="新会话"))s.title=first.content.replace(/\s+/g," ").slice(0,14)+(first.content.length>14?"…":"");
+  saveSessions();
+}
+function restoreSession(id){
+  const s=sessions.find(x=>x.id===id);if(!s)return;
+  curId=id;history=s.messages||[];
+  $("chatBox").innerHTML="";
+  if(!history.length){const e=document.createElement("div");e.className="empty";e.innerHTML='<div class="big">🐱</div><p>喵～ 开始新的对话吧！</p>';$("chatBox").appendChild(e)}
+  else history.forEach(m=>addMsg(m.role,m.content));
+  $("historyPanel").classList.remove("show");
+  $("chatBox").scrollTop=$("chatBox").scrollHeight;
+}
+function newSession(showPanel){
+  curId=Date.now()+"";
+  sessions.push({id:curId,title:"新会话",updated_at:Date.now(),messages:[]});
+  saveSessions();
+  history=[];
+  $("chatBox").innerHTML='<div class="empty"><div class="big">🐱</div><p>喵～ 新会话开始啦！跟喵酱聊聊吧～</p></div>';
+  if(showPanel)renderSessions();
+}
+function renderSessions(){
+  const box=$("sessionList");if(!box)return;
+  box.innerHTML="";
+  if(!sessions.length){box.innerHTML='<div style="padding:24px;text-align:center;color:var(--dim)">还没有历史会话喵～</div>';return}
+  [...sessions].sort((a,b)=>b.updated_at-a.updated_at).forEach(s=>{
+    const d=document.createElement("div");
+    d.className="session-item"+(s.id===curId?" active":"");
+    const tm=new Date(s.updated_at);
+    const ts=String(tm.getMonth()+1).padStart(2,"0")+"-"+String(tm.getDate()).padStart(2,"0")+" "+String(tm.getHours()).padStart(2,"0")+":"+String(tm.getMinutes()).padStart(2,"0");
+    const t=document.createElement("div");t.className="session-title";t.textContent=s.title;
+    const m=document.createElement("div");m.className="session-meta";m.textContent=(s.messages?s.messages.length:0)+" 条消息 · "+ts;
+    const del=document.createElement("span");del.className="session-del";del.textContent="🗑️";
+    d.appendChild(t);d.appendChild(m);d.appendChild(del);
+    d.onclick=()=>restoreSession(s.id);
+    del.onclick=(e)=>{e.stopPropagation();if(!confirm("删除这个会话喵？"))return;sessions=sessions.filter(x=>x.id!==s.id);if(curId===s.id){curId=sessions.length?sessions[0].id:null;const ns=curSession();history=ns?ns.messages||[]:[];$("chatBox").innerHTML="";if(!history.length){const e2=document.createElement("div");e2.className="empty";e2.innerHTML='<div class="big">🐱</div><p>喵～ 开始新的对话吧！</p>';$("chatBox").appendChild(e2)}else history.forEach(m=>addMsg(m.role,m.content))}saveSessions();renderSessions()};
+    box.appendChild(d);
+  });
+}
+
+// ================= 云同步 & 备份 =================
+function backupData(){return JSON.stringify({app:"neko-chat",v:1,exported_at:Date.now(),sessions,curId})}
+function applySessions(d){
+  sessions=Array.isArray(d.sessions)?d.sessions:[];
+  curId=d.curId&&sessions.find(s=>s.id===d.curId)?d.curId:(sessions[0]?sessions[0].id:null);
+  saveSessions();
+  const s=curSession();history=s?s.messages||[]:[];
+  $("chatBox").innerHTML="";
+  if(!history.length){const e=document.createElement("div");e.className="empty";e.innerHTML='<div class="big">🐱</div><p>喵～ 开始新的对话吧！</p>';$("chatBox").appendChild(e)}
+  else history.forEach(m=>addMsg(m.role,m.content));
+}
+function exportBackup(){
+  const a=document.createElement("a");
+  const blob=new Blob([backupData()],{type:"application/json"});
+  a.href=URL.createObjectURL(blob);
+  a.download="neko-chat-history-"+new Date().toISOString().slice(0,10)+".json";
+  a.click();URL.revokeObjectURL(a.href);
+  toast("备份文件已导出喵～ 💾");
+}
+function importBackup(){
+  const inp=document.createElement("input");
+  inp.type="file";inp.accept=".json,application/json";
+  inp.onchange=()=>{
+    const f=inp.files[0];if(!f)return;
+    const rd=new FileReader();
+    rd.onload=e=>{
+      try{applySessions(JSON.parse(e.target.result));toast("备份导入成功喵～ 📂")}
+      catch(err){alert("导入失败: "+err.message)}
+    };
+    rd.readAsText(f);
+  };
+  inp.click();
+}
+async function cloudUpload(){
+  const url=($("cfgSyncUrl").value||"").trim();
+  if(!url){alert("请先填写云同步地址喵～");return}
+  try{
+    const r=await fetch(url,{method:"PUT",headers:{"Content-Type":"application/json"},body:backupData()});
+    if(!r.ok&&r.status!==204)throw new Error("HTTP "+r.status);
+    toast("已上传到云端喵～ ☁️");
+  }catch(e){alert("上传失败: "+e.message)}
+}
+async function cloudDownload(){
+  const url=($("cfgSyncUrl").value||"").trim();
+  if(!url){alert("请先填写云同步地址喵～");return}
+  try{
+    const r=await fetch(url,{method:"GET"});
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    applySessions(await r.json());
+    toast("已从云端恢复喵～ ☁️");
+  }catch(e){alert("下载失败: "+e.message)}
+}
 $("btnClear").onclick=async()=>{
-  if(!confirm("确定清空全部对话记录喵？"))return;
-  history=[];$("chatBox").innerHTML="";
+  if(!confirm("确定清空这个会话的对话记录喵？"))return;
+  history=[];saveHistory();
+  $("chatBox").innerHTML="";
   addMsg("ai","好的喵，喵酱已经把之前的话都忘掉了～ 我们重新开始吧！");
 };
 loadCfg();
-addMsg("ai","喵～主人好！我是喵酱 🐱 v0.4.0：♾️ 无限记忆已开启，喵酱会一直记住我们的对话！\n✨ 猫耳标题 · 漂浮猫爪背景 · 渐变气泡\n🧠 深度思考 · 🔉 语音朗读 · 🎤 语音输入\n右上角 ⚙️ 设置里都可以调整哦！");
+loadSessions();
+const _s0=curSession();
+if(_s0&&_s0.messages&&_s0.messages.length){
+  history=_s0.messages;
+  $("chatBox").innerHTML="";
+  history.forEach(m=>addMsg(m.role,m.content));
+}else{
+  history=[];
+  addMsg("ai","喵～主人好！我是喵酱 🐱 v0.4.0：♾️ 无限记忆已开启，喵酱会一直记住我们的对话！\n✨ 猫耳标题 · 漂浮猫爪背景 · 渐变气泡\n🧠 深度思考 · 🔉 语音朗读 · 🎤 语音输入\n右上角 ⚙️ 设置里都可以调整哦！");
+}
+if(!cfg.api_key)$("setupHint").style.display="block";
 </script>
 </body>
 </html>"""
