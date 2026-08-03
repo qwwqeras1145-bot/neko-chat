@@ -321,6 +321,14 @@ border-radius:14px;padding:11px 16px;font-size:13px;line-height:1.6;margin-botto
       <div class="hint">💡 选「自定义」可填任意 OpenAI 兼容 API 地址（自定义 API）</div>
     </div>
     <div class="field">
+      <label>🐾 我的头像</label>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <img id="avatarPrev" style="width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid var(--line);background:#f3ecff">
+        <button type="button" class="btn small" style="flex:0 0 auto;padding:8px 14px" onclick="pickAvatar()">📷 上传头像</button>
+        <button type="button" class="btn small ghost" style="flex:0 0 auto;padding:8px 14px" onclick="clearAvatar()">恢复默认</button>
+      </div>
+    </div>
+    <div class="field">
       <label>API Base URL</label>
       <input id="cfgBaseUrl" placeholder="https://api.deepseek.com/v1">
     </div>
@@ -404,6 +412,7 @@ async function loadCfg(){
   $("cfgApiKey").value=cfg.api_key||"";
   $("cfgModel").value=cfg.model||"";
   $("cfgReasonModel").value=cfg.reasoning_model||"";
+  $("avatarPrev").src=cfg.avatar||"";
   $("cfgPrompt").value=cfg.prompt||"";
   $("cfgTemp").value=cfg.temperature||0.8;$("tempVal").textContent=cfg.temperature||0.8;
   $("cfgCtx").value=cfg.context_len||10;$("ctxVal").textContent=cfg.context_len||10;
@@ -435,7 +444,7 @@ function addMsg(role,text){
   if(role==="ai"){
     avatar='<div class="avatar"><svg viewBox="0 0 100 100"><circle cx="50" cy="54" r="36" fill="url(#g)"/><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6d9ff"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><path d="M18 40 L30 22 L42 36 Z" fill="#c9b3ff"/><path d="M82 40 L70 22 L58 36 Z" fill="#c9b3ff"/><circle cx="38" cy="52" r="4" fill="#5b3a8e"/><circle cx="62" cy="52" r="4" fill="#5b3a8e"/><path d="M44 66 Q50 72 56 66" stroke="#ff6fa5" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M34 62 L22 58 M66 62 L78 58" stroke="#c9b3ff" stroke-width="2.5" stroke-linecap="round"/></svg></div>';
   }else{
-    avatar='<div class="avatar"><svg viewBox="0 0 100 100"><circle cx="50" cy="52" r="34" fill="#ffd9c4"/><circle cx="32" cy="34" r="14" fill="#ffd9c4"/><circle cx="68" cy="34" r="14" fill="#ffd9c4"/><circle cx="38" cy="50" r="3.5" fill="#5b3a2e"/><circle cx="62" cy="50" r="3.5" fill="#5b3a2e"/><path d="M46 60 Q50 64 54 60" stroke="#e08a5e" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg></div>';
+    avatar=cfg&&cfg.avatar?'<div class="avatar" style="overflow:hidden;background:#f3ecff"><img src="'+cfg.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>':'<div class="avatar"><svg viewBox="0 0 100 100"><circle cx="50" cy="52" r="34" fill="#ffd9c4"/><circle cx="32" cy="34" r="14" fill="#ffd9c4"/><circle cx="68" cy="34" r="14" fill="#ffd9c4"/><circle cx="38" cy="50" r="3.5" fill="#5b3a2e"/><circle cx="62" cy="50" r="3.5" fill="#5b3a2e"/><path d="M46 60 Q50 64 54 60" stroke="#e08a5e" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg></div>';
   }
   wrap.innerHTML=avatar+'<div style="flex:1;min-width:0"><div class="think" style="display:none"><div class="think-head"><span class="arrow">▶</span>🤔 思考过程</div><div class="think-body"></div></div><div class="bubble"></div></div>';
   const b=wrap.querySelector(".bubble");
@@ -544,18 +553,52 @@ $("cfgCtx").oninput=()=>$("ctxVal").textContent=$("cfgCtx").value;
 $("rowReasoning").onclick=()=>{const on=!isOn("swReasoning");setSwitch("swReasoning",on);$("reasonModelField").style.display=on?"block":"none"};
 $("rowMemory").onclick=()=>{const on=!isOn("swMemory");setSwitch("swMemory",on);$("ctxField").style.display=on?"none":"block"};
 $("rowVoice").onclick=()=>{setSwitch("swVoice",!isOn("swVoice"))};
-$("btnSave").onclick=async()=>{
+async function saveSettings(){
+$("btnSave").onclick=()=>saveSettings();
   try{
     cfg={base_url:$("cfgBaseUrl").value.trim(),api_key:$("cfgApiKey").value.trim(),
          model:$("cfgModel").value.trim(),prompt:$("cfgPrompt").value,
          temperature:parseFloat($("cfgTemp").value),unlimited_memory:isOn("swMemory"),context_len:parseInt($("cfgCtx").value),
-         voice:isOn("swVoice"),reasoning:isOn("swReasoning"),reasoning_model:$("cfgReasonModel").value.trim()};
+         voice:isOn("swVoice"),reasoning:isOn("swReasoning"),reasoning_model:$("cfgReasonModel").value.trim(),
+         avatar:cfg.avatar||""};
     await api("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(cfg)});
     $("setupHint").style.display="none";
     $("settings").classList.remove("show");
     addMsg("ai","配置保存成功喵～ 🐱 现在可以跟喵酱聊天啦！");
   }catch(e){alert("保存失败: "+e.message)}
-};
+}
+let toastTimer;
+function toast(msg){
+  let t=document.getElementById("nekoToast");
+  if(!t){t=document.createElement("div");t.id="nekoToast";t.style.cssText="position:fixed;left:50%;bottom:60px;transform:translateX(-50%);background:rgba(45,43,61,.93);color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;z-index:999;transition:opacity .3s;white-space:nowrap;max-width:86vw;overflow:hidden;text-overflow:ellipsis";document.body.appendChild(t)}
+  t.textContent=msg;t.style.opacity=1;
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.opacity=0,2200);
+}
+function pickAvatar(){
+  const inp=document.createElement("input");
+  inp.type="file";inp.accept="image/*";
+  inp.onchange=()=>{
+    const f=inp.files[0];if(!f)return;
+    const rd=new FileReader();
+    rd.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        const c=document.createElement("canvas");c.width=c.height=128;
+        const ctx=c.getContext("2d");
+        ctx.beginPath();ctx.arc(64,64,64,0,Math.PI*2);ctx.clip();
+        const s=Math.min(128/img.width,128/img.height),w=img.width*s,h=img.height*s;
+        ctx.drawImage(img,(128-w)/2,(128-h)/2,w,h);
+        cfg.avatar=c.toDataURL("image/jpeg",0.85);
+        $("avatarPrev").src=cfg.avatar;
+        saveSettings();toast("头像更新成功喵～ 🐱");
+      };
+      img.src=e.target.result;
+    };
+    rd.readAsDataURL(f);
+  };
+  inp.click();
+}
+function clearAvatar(){cfg.avatar="";$("avatarPrev").src="";saveSettings();toast("已恢复默认头像")}
 $("btnClear").onclick=async()=>{
   if(!confirm("确定清空全部对话记录喵？"))return;
   history=[];$("chatBox").innerHTML="";
