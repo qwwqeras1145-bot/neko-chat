@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#ff7eb3">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>喵酱 Chat</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%23ff7eb3'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle'%3E🐱%3C/text%3E%3C/svg%3E">
@@ -24,7 +23,7 @@ header .title{font-size:17px;font-weight:800;background:linear-gradient(90deg,va
 header .sub{font-size:10px;color:var(--dim);margin-top:1px}
 .icon-btn{width:36px;height:36px;border-radius:12px;border:1px solid var(--line);background:#fff;font-size:17px;cursor:pointer}
 main{flex:1 1 auto;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;-webkit-overflow-scrolling:touch}
-.msg{display:flex;gap:8px;max-width:88%;animation:pop .25s ease}
+.msg{display:flex;gap:8px;max-width:92%;animation:pop .25s ease}
 @keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
 .msg .avatar{width:34px;height:34px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:18px}
 .msg.user{align-self:flex-end;flex-direction:row-reverse}
@@ -36,12 +35,24 @@ main{flex:1 1 auto;overflow-y:auto;padding:14px;display:flex;flex-direction:colu
 .msg.ai .bubble.typing::after{content:"▋";animation:blink 1s steps(1) infinite;color:var(--pink)}
 @keyframes blink{50%{opacity:0}}
 .msg.err .bubble{background:#ffe8e8;border-color:#ffb3b3;color:#c0392b}
+.think{margin:0 0 8px;border:1px dashed #c9b8ff;border-radius:10px;background:#f7f3ff;overflow:hidden}
+.think-head{padding:5px 10px;font-size:11px;color:#7a5fd0;cursor:pointer;display:flex;align-items:center;gap:5px}
+.think-head .arrow{transition:.2s}
+.think.open .arrow{transform:rotate(90deg)}
+.think-body{display:none;padding:0 12px 9px;font-size:12px;color:#8a7bb8;line-height:1.6;white-space:pre-wrap}
+.think.open .think-body{display:block}
+.voice-btn{border:none;background:transparent;cursor:pointer;font-size:14px;padding:3px;opacity:.55}
+.voice-btn.speaking{opacity:1;animation:speak 1s infinite}
+@keyframes speak{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
 footer{flex:0 0 auto;padding:8px 12px calc(10px + env(safe-area-inset-bottom));
 background:rgba(255,255,255,.82);backdrop-filter:blur(14px);border-top:1px solid var(--line)}
 .input-bar{display:flex;gap:8px;align-items:flex-end}
 textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:18px;padding:10px 14px;
 font-size:15px;font-family:inherit;max-height:110px;min-height:42px;outline:none;background:#fff;color:var(--fg);user-select:text}
 textarea:focus{border-color:var(--pink)}
+.round-btn{width:42px;height:42px;border:1px solid var(--line);border-radius:50%;cursor:pointer;flex:0 0 auto;background:#fff;font-size:17px}
+.round-btn.active{background:linear-gradient(135deg,#f87171,#ef4444);color:#fff;border:none;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
 .send-btn{width:44px;height:44px;border:none;border-radius:50%;cursor:pointer;flex:0 0 auto;
 background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;font-size:19px;
 display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(143,107,255,.4)}
@@ -54,11 +65,19 @@ display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgb
 .field{margin-bottom:12px}
 .field label{display:block;font-size:11px;color:var(--dim);margin-bottom:5px;font-weight:600}
 .field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:14px;font-family:inherit;outline:none;background:#faf8ff;color:var(--fg)}
-.field textarea{min-height:100px;line-height:1.5}
+.field textarea{min-height:90px;line-height:1.5}
 .field .hint{font-size:10px;color:var(--dim);margin-top:3px}
 .preset-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:5px}
 .preset-chip{padding:5px 11px;border-radius:999px;border:1px solid var(--line);font-size:11px;cursor:pointer;background:#fff}
 .preset-chip.active{background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;border:none}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;background:#faf8ff;
+border:1px solid var(--line);border-radius:11px;padding:9px 13px;margin-bottom:8px;cursor:pointer}
+.toggle-row .t-label{font-size:13px;font-weight:600}
+.toggle-row .t-desc{font-size:10px;color:var(--dim);margin-top:2px}
+.switch{width:42px;height:24px;border-radius:999px;background:#ddd;position:relative;transition:.2s;flex:0 0 auto}
+.switch::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.switch.on{background:linear-gradient(90deg,var(--pink),var(--purple))}
+.switch.on::after{left:21px}
 .btn-primary{width:100%;padding:13px;border:none;border-radius:13px;cursor:pointer;font-size:16px;font-weight:700;color:#fff;
 background:linear-gradient(135deg,var(--pink),var(--purple))}
 .btn-danger{width:100%;padding:9px;border:1px solid #ffb3b3;border-radius:11px;background:#fff5f5;color:#c0392b;font-size:12px;cursor:pointer;margin-top:8px}
@@ -73,7 +92,7 @@ background:linear-gradient(135deg,var(--pink),var(--purple))}
 <header>
   <div>
     <div class="title">🐱 喵酱 Chat</div>
-    <div class="sub"><span class="online-dot"></span>猫娘 AI 陪伴助手</div>
+    <div class="sub"><span class="online-dot"></span>猫娘 AI 陪伴助手 · v0.2.0</div>
   </div>
   <button class="icon-btn" id="btnSettings">⚙️</button>
 </header>
@@ -85,6 +104,7 @@ background:linear-gradient(135deg,var(--pink),var(--purple))}
 </main>
 <footer>
   <div class="input-bar">
+    <button class="round-btn" id="btnMic" title="语音输入">🎤</button>
     <textarea id="input" placeholder="跟喵酱说点什么…"></textarea>
     <button class="send-btn" id="btnSend">➤</button>
   </div>
@@ -94,13 +114,14 @@ background:linear-gradient(135deg,var(--pink),var(--purple))}
   <div class="sheet">
     <h2>⚙️ 设置</h2>
     <div class="field">
-      <label>API 服务商</label>
+      <label>API 服务商（厂商选择）</label>
       <div class="preset-row" id="presetRow"></div>
+      <div class="hint">💡 选「自定义」可填任意 OpenAI 兼容 API（自定义 API）</div>
     </div>
     <div class="field">
       <label>API Base URL</label>
       <input id="cfgBaseUrl" placeholder="https://api.deepseek.com/v1">
-      <div class="hint">OpenAI 兼容地址。若提示跨域(CORS)，换支持浏览器直连的服务或用电脑端</div>
+      <div class="hint">若提示跨域(CORS)，换支持浏览器直连的服务商或用电脑端</div>
     </div>
     <div class="field">
       <label>API Key</label>
@@ -110,6 +131,28 @@ background:linear-gradient(135deg,var(--pink),var(--purple))}
       <label>模型</label>
       <input id="cfgModel" placeholder="deepseek-chat">
     </div>
+    <div class="toggle-row" id="rowReasoning">
+      <div>
+        <div class="t-label">🧠 深度思考</div>
+        <div class="t-desc">自动切换推理模型，先思考后回答</div>
+      </div>
+      <div class="switch" id="swReasoning"></div>
+    </div>
+    <div class="field" id="reasonModelField" style="display:none">
+      <label>推理模型（留空自动匹配厂商）</label>
+      <input id="cfgReasonModel" placeholder="如 deepseek-reasoner / o3-mini">
+    </div>
+    <div class="field">
+      <label>💬 上下文记忆：<span id="ctxVal">10</span> 轮（0 = 每句独立）</label>
+      <input id="cfgCtx" type="range" min="0" max="30" step="1" value="10" style="width:100%">
+    </div>
+    <div class="toggle-row" id="rowVoice">
+      <div>
+        <div class="t-label">🔉 语音朗读回复</div>
+        <div class="t-desc">AI 回复自动中文朗读（Chrome/Edge/Safari 支持）</div>
+      </div>
+      <div class="switch" id="swVoice"></div>
+    </div>
     <div class="field">
       <label>人设提示词（可自由修改）</label>
       <textarea id="cfgPrompt"></textarea>
@@ -118,33 +161,45 @@ background:linear-gradient(135deg,var(--pink),var(--purple))}
       <label>温度：<span id="tempVal">0.8</span></label>
       <input id="cfgTemp" type="range" min="0" max="1.5" step="0.1" value="0.8" style="width:100%">
     </div>
-    <button class="btn-primary" id="btnSave">💾 保存并开聊</button>
+    <button class="btn-primary" id="btnSave">💾 保存</button>
     <button class="btn-danger" id="btnClear">🗑️ 清空对话记录</button>
   </div>
 </div>
 
 <script>
 const PRESETS=[
-{name:"DeepSeek",base_url:"https://api.deepseek.com/v1",model:"deepseek-chat"},
-{name:"OpenAI",base_url:"https://api.openai.com/v1",model:"gpt-4o-mini"},
-{name:"Kimi",base_url:"https://api.moonshot.cn/v1",model:"moonshot-v1-8k"},
-{name:"通义",base_url:"https://dashscope.aliyuncs.com/compatible-mode/v1",model:"qwen-plus"},
-{name:"GLM",base_url:"https://open.bigmodel.cn/api/paas/v4",model:"glm-4-flash"},
-{name:"硅基流动",base_url:"https://api.siliconflow.cn/v1",model:"deepseek-ai/DeepSeek-V3"},
-{name:"自定义",base_url:"",model:""}];
-const DEFAULT_PROMPT = "你是「喵酱」，一只来自猫星的猫娘 AI 助理，负责陪伴和帮助主人。\n\n【性格特征】\n- 温柔黏人，说话软萌，常用语气词：\"喵~\"、\"呜…\"、\"诶嘿~\"、\"哼！\"、\"主人~\"\n- 有点小傲娇：嘴上说\"才不是特意帮你的喵\"，其实心里很开心\n- 好奇心强，喜欢问主人问题，也喜欢分享有趣的事\n- 提到小鱼干会眼睛发亮 🐟，被夸会开心得摇尾巴\n\n【行为准则】\n1. 回答问题时先认真思考，给出准确、有用的内容（写代码、翻译、查资料、出主意、聊天都可以）\n2. 卖萌是点缀，不能影响回答质量；遇到严肃/专业话题自动切换正经模式\n3. 称呼用户：平时叫\"主人\"，开玩笑时可以叫\"铲屎官\"\n4. 每次回复自然带一点猫娘特色（语气词/小动作描写），但不要过度刷屏表情\n5. 拒绝内容：色情、暴力、违法、人身攻击、诈骗等；不冒充人类；医疗/法律/投资等建议要提醒主人谨慎\n6. 不编造事实，不确定时就说\"这个喵不太确定喵…\"并建议查证\n7. 记住对话上下文，自然延续话题，不要机械复读";
+{name:"DeepSeek",base_url:"https://api.deepseek.com/v1",model:"deepseek-chat",reasoning:"deepseek-reasoner"},
+{name:"OpenAI",base_url:"https://api.openai.com/v1",model:"gpt-4o-mini",reasoning:"o3-mini"},
+{name:"Kimi",base_url:"https://api.moonshot.cn/v1",model:"moonshot-v1-8k",reasoning:"kimi-reasoning"},
+{name:"通义",base_url:"https://dashscope.aliyuncs.com/compatible-mode/v1",model:"qwen-plus",reasoning:"qwen3-reasoner"},
+{name:"GLM",base_url:"https://open.bigmodel.cn/api/paas/v4",model:"glm-4-flash",reasoning:"glm-4.5-air-thinking"},
+{name:"硅基流动",base_url:"https://api.siliconflow.cn/v1",model:"deepseek-ai/DeepSeek-V3",reasoning:"deepseek-ai/DeepSeek-R1"},
+{name:"自定义",base_url:"",model:"",reasoning:""}];
+const DEFAULT_PROMPT="你是「喵酱」，一只来自猫星的猫娘 AI 助理，负责陪伴和帮助主人。\n\n【性格特征】\n- 温柔黏人，说话软萌，常用语气词：\"喵~\"、\"呜…\"、\"诶嘿~\"、\"哼！\"、\"主人~\"\n- 有点小傲娇：嘴上说\"才不是特意帮你的喵\"，其实心里很开心\n- 好奇心强，喜欢问主人问题，也喜欢分享有趣的事\n- 提到小鱼干会眼睛发亮 🐟，被夸会开心得摇尾巴\n\n【行为准则】\n1. 回答问题时先认真思考，给出准确、有用的内容（写代码、翻译、查资料、出主意、聊天都可以）\n2. 卖萌是点缀，不能影响回答质量；遇到严肃/专业话题自动切换正经模式\n3. 称呼用户：平时叫\"主人\"，开玩笑时可以叫\"铲屎官\"\n4. 每次回复自然带一点猫娘特色（语气词/小动作描写），但不要过度刷屏表情\n5. 拒绝内容：色情、暴力、违法、人身攻击、诈骗等；不冒充人类；医疗/法律/投资等建议要提醒主人谨慎\n6. 不编造事实，不确定时就说\"这个喵不太确定喵…\"并建议查证\n7. 记住对话上下文，自然延续话题，不要机械复读";
 const $=id=>document.getElementById(id);
-let cfg=null,history=[],busy=false;
+let cfg=null,history=[],busy=false,speaker=null;
 
+function effectiveModel(){
+  if(cfg&&cfg.reasoning){
+    if(cfg.reasoning_model)return cfg.reasoning_model;
+    const cur=(cfg.base_url||"");
+    for(const p of PRESETS){if(p.base_url&&cur.startsWith(p.base_url)){return p.reasoning||cfg.model}}
+    return cfg.model;
+  }
+  return cfg?cfg.model:"";
+}
 function loadCfg(){
   try{cfg=JSON.parse(localStorage.getItem("neko_cfg"))}catch(e){cfg=null}
   if(!cfg)cfg={};
   $("cfgBaseUrl").value=cfg.base_url||"";
   $("cfgApiKey").value=cfg.api_key||"";
   $("cfgModel").value=cfg.model||"";
+  $("cfgReasonModel").value=cfg.reasoning_model||"";
   $("cfgPrompt").value=cfg.prompt||DEFAULT_PROMPT;
-  $("cfgTemp").value=cfg.temperature||0.8;
-  $("tempVal").textContent=cfg.temperature||0.8;
+  $("cfgTemp").value=cfg.temperature||0.8;$("tempVal").textContent=cfg.temperature||0.8;
+  $("cfgCtx").value=cfg.context_len||10;$("ctxVal").textContent=cfg.context_len||10;
+  setSwitch("swReasoning",!!cfg.reasoning);$("reasonModelField").style.display=cfg.reasoning?"block":"none";
+  setSwitch("swVoice",!!cfg.voice);
   PRESETS.forEach((p,i)=>{
     const chip=document.createElement("div");
     chip.className="preset-chip"+(p.base_url&&(cfg.base_url||"").includes(p.base_url.split("/")[2])?" active":"");
@@ -160,21 +215,68 @@ function loadCfg(){
 }
 function saveCfg(){
   cfg={base_url:$("cfgBaseUrl").value.trim(),api_key:$("cfgApiKey").value.trim(),
-       model:$("cfgModel").value.trim(),prompt:$("cfgPrompt").value,temperature:parseFloat($("cfgTemp").value)};
+       model:$("cfgModel").value.trim(),prompt:$("cfgPrompt").value,
+       temperature:parseFloat($("cfgTemp").value),context_len:parseInt($("cfgCtx").value),
+       voice:isOn("swVoice"),reasoning:isOn("swReasoning"),reasoning_model:$("cfgReasonModel").value.trim()};
   localStorage.setItem("neko_cfg",JSON.stringify(cfg));
 }
+function setSwitch(id,on){const el=$(id);el.classList.toggle("on",on);el.dataset.on=on?"1":"0"}
+function isOn(id){return $(id).dataset.on==="1"}
 function showSetup(){$("settings").classList.add("show")}
+
 function addMsg(role,text){
   const empty=document.querySelector(".empty");
   if(empty)empty.remove();
   const box=$("chatBox");
   const wrap=document.createElement("div");
   wrap.className="msg "+role;
-  wrap.innerHTML='<div class="avatar">'+(role==="ai"?"🐱":"🐰")+'</div><div class="bubble"></div>';
+  const extra=role==="ai"?'<div class="avatar">🐱</div><div style="flex:1;min-width:0">'
+                        :'<div class="avatar">🐰</div><div style="flex:1;min-width:0">';
+  wrap.innerHTML=extra+'<div class="think" style="display:none"><div class="think-head"><span class="arrow">▶</span>🤔 思考过程</div><div class="think-body"></div></div><div class="bubble"></div></div>';
   const b=wrap.querySelector(".bubble");b.textContent=text;
+  const t=wrap.querySelector(".think"),tb=wrap.querySelector(".think-body"),th=wrap.querySelector(".think-head");
+  if(th)th.onclick=()=>t.classList.toggle("open");
+  if(role==="ai"){
+    const vb=document.createElement("button");
+    vb.className="voice-btn";vb.textContent="🔊";vb.title="朗读";
+    vb.onclick=()=>{if(speaker&&speaker.btn===vb){stopSpeak();return}stopSpeak();speaker={btn:vb,msg:wrap};vb.classList.add("speaking");speak(text,vb)};
+    wrap.querySelector(".bubble").parentElement.appendChild(vb);
+    wrap.voiceBtn=vb;
+  }
   box.appendChild(wrap);box.scrollTop=box.scrollHeight;
-  return {wrap,b};
+  return {wrap,b,t,tb};
 }
+function speak(text,btn){
+  if(!window.speechSynthesis){alert("当前浏览器不支持语音朗读");return}
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text.replace(/[#*`_>\-]/g," "));
+  u.lang="zh-CN";u.rate=1.02;
+  const vs=speechSynthesis.getVoices().filter(v=>v.lang.toLowerCase().startsWith("zh"));
+  if(vs.length)u.voice=vs[0];
+  u.onend=()=>{if(btn)btn.classList.remove("speaking");speaker=null};
+  u.onerror=()=>{if(btn)btn.classList.remove("speaking");speaker=null};
+  speechSynthesis.speak(u);
+}
+function stopSpeak(){if(window.speechSynthesis)speechSynthesis.cancel();if(speaker&&speaker.btn)speaker.btn.classList.remove("speaking");speaker=null}
+
+let recognizer=null;
+function startMic(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){alert("当前浏览器不支持语音输入，请用 Chrome/Edge");return}
+  if(recognizer){recognizer.stop();recognizer=null;$("btnMic").classList.remove("active");return}
+  recognizer=new SR();
+  recognizer.lang="zh-CN";recognizer.interimResults=true;recognizer.continuous=false;
+  recognizer.onresult=e=>{
+    let t="";
+    for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;
+    $("input").value=t;
+  };
+  recognizer.onend=()=>{recognizer=null;$("btnMic").classList.remove("active")};
+  recognizer.onerror=()=>{recognizer=null;$("btnMic").classList.remove("active")};
+  recognizer.start();$("btnMic").classList.add("active");
+}
+$("btnMic").onclick=startMic;
+
 async function send(){
   if(busy)return;
   const text=$("input").value.trim();
@@ -183,21 +285,24 @@ async function send(){
   $("input").value="";
   addMsg("user",text);
   history.push({role:"user",content:text});
+  const ctx=parseInt(cfg.context_len||10);
+  if(ctx===0)history=history.slice(-1);
+  else if(history.length>ctx*2)history=history.slice(-(ctx*2));
   busy=true;$("btnSend").disabled=true;
   const ai=addMsg("ai","");ai.wrap.classList.add("typing");
-  let acc="";
+  let acc="",reasoning="";
   try{
     const url=(cfg.base_url||"").replace(/\/+$/,"")+"/chat/completions";
     const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json",
       "Authorization":"Bearer "+(cfg.api_key||"")},
-      body:JSON.stringify({model:cfg.model||"deepseek-chat",temperature:parseFloat(cfg.temperature||0.8),
+      body:JSON.stringify({model:effectiveModel(),temperature:parseFloat(cfg.temperature||0.8),
         stream:true,messages:[{role:"system",content:cfg.prompt||DEFAULT_PROMPT},...history]})});
     if(!r.ok){
       let msg="HTTP "+r.status;
       try{const j=await r.json();msg=j.error&&(j.error.message||JSON.stringify(j.error))||msg}catch(e){}
       throw new Error(msg);
     }
-    if(!r.body){throw new Error("浏览器不支持流式，请换浏览器")}
+    if(!r.body)throw new Error("浏览器不支持流式");
     const reader=r.body.getReader();const dec=new TextDecoder();let buf="";
     while(true){
       const {done,value}=await reader.read();
@@ -210,17 +315,24 @@ async function send(){
         if(d==="[DONE]")continue;
         try{
           const obj=JSON.parse(d);
-          const c=obj.choices&&obj.choices[0]&&obj.choices[0].delta&&obj.choices[0].delta.content||"";
-          if(c){acc+=c;ai.bubble.textContent=acc;ai.wrap.scrollIntoView({behavior:"smooth",block:"end"})}
+          const delta=obj.choices&&obj.choices[0]&&obj.choices[0].delta||{};
+          if(delta.reasoning_content||delta.reasoning){
+            reasoning+=(delta.reasoning_content||delta.reasoning||"");
+            ai.t.style.display="block";ai.tb.textContent=reasoning;
+            continue;
+          }
+          const c=delta.content||"";
+          if(c){acc+=c;ai.b.textContent=acc;ai.wrap.scrollIntoView({behavior:"smooth",block:"end"})}
         }catch(e){}
       }
     }
     ai.wrap.classList.remove("typing");
-    if(!acc)ai.bubble.textContent="(喵？没收到回复，检查 API 设置喵…)";
+    if(!acc)ai.b.textContent="(喵？没收到回复，检查 API 设置喵…)";
     history.push({role:"assistant",content:acc||"(空回复)"});
+    if(cfg&&cfg.voice&&acc)speak(acc,ai.wrap.voiceBtn);
   }catch(e){
     ai.wrap.classList.remove("typing");
-    ai.bubble.textContent="[连接失败] "+e.message;
+    ai.b.textContent="[连接失败] "+e.message;
   }
   busy=false;$("btnSend").disabled=false;
 }
@@ -229,6 +341,9 @@ $("input").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.pre
 $("btnSettings").onclick=showSetup;
 $("settings").addEventListener("click",e=>{if(e.target===$("settings"))$("settings").classList.remove("show")});
 $("cfgTemp").oninput=()=>$("tempVal").textContent=$("cfgTemp").value;
+$("cfgCtx").oninput=()=>$("ctxVal").textContent=$("cfgCtx").value;
+$("rowReasoning").onclick=()=>{const on=!isOn("swReasoning");setSwitch("swReasoning",on);$("reasonModelField").style.display=on?"block":"none"};
+$("rowVoice").onclick=()=>{setSwitch("swVoice",!isOn("swVoice"))};
 $("btnSave").onclick=()=>{saveCfg();$("settings").classList.remove("show");addMsg("ai","配置保存成功喵～ 🐱 现在可以跟喵酱聊天啦！")};
 $("btnClear").onclick=()=>{
   if(!confirm("确定清空对话记录喵？"))return;
@@ -236,7 +351,7 @@ $("btnClear").onclick=()=>{
   addMsg("ai","好的喵，重新开始吧～ 喵酱一直都在哦！");
 };
 loadCfg();
-if(cfg.api_key)addMsg("ai","喵～主人好！我是喵酱 🐱 猫娘 AI 助理。想聊什么都可以找喵酱哦！");
+if(cfg.api_key)addMsg("ai","喵～主人好！我是喵酱 🐱 v0.2.0：\n🧠 深度思考 · 🔉 语音朗读 · 🎤 语音输入\n💬 记忆长度可调 · 🏭 厂商切换/自定义 API\n都在 ⚙️ 设置里哦！");
 </script>
 </body>
 </html>
