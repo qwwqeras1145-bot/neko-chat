@@ -443,7 +443,7 @@ function renderSessions(){
     const del=document.createElement("span");del.className="session-del";del.textContent="🗑️";
     d.appendChild(t);d.appendChild(m);d.appendChild(del);
     d.onclick=()=>restoreSession(s.id);
-    del.onclick=(e)=>{e.stopPropagation();if(!confirm("删除这个会话喵？"))return;sessions=sessions.filter(x=>x.id!==s.id);if(curId===s.id){curId=sessions.length?sessions[0].id:null;const ns=curSession();history=ns?ns.messages||[]:[];$("chatBox").innerHTML="";if(!history.length){const e2=document.createElement("div");e2.className="empty";e2.innerHTML='<div class="big">🐱</div><p>喵～ 开始新的对话吧！</p>';$("chatBox").appendChild(e2)}else history.forEach(m=>addMsg(m.role,m.content))}saveSessions();renderSessions()};
+    del.onclick=(e)=>{e.stopPropagation();if(!confirm("删除这个会话喵？"))return;sessions=sessions.filter(x=>x.id!==s.id);if(curId===s.id){curId=sessions.length?[...sessions].sort((a,b)=>b.updated_at-a.updated_at)[0].id:null;const ns=curSession();history=ns?ns.messages||[]:[];$("chatBox").innerHTML="";if(!history.length){const e2=document.createElement("div");e2.className="empty";e2.innerHTML='<div class="big">🐱</div><p>喵～ 开始新的对话吧！</p>';$("chatBox").appendChild(e2)}else history.forEach(m=>addMsg(m.role,m.content))}saveSessions();renderSessions()};
     box.appendChild(d);
   });
 }
