@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-喵酱 Chat - 电脑端 v0.2.0
+喵酱 Chat - 电脑端 v0.3.0（美化版）
 纯 AI 聊天助手（猫娘人设），标准库实现，无第三方依赖。
-功能：上下文长度设置 / 语音朗读 / 语音输入 / 自定义 API / 厂商预设 / 深度思考(reasoning)
+功能：上下文长度 / 语音朗读 / 语音输入 / 自定义 API / 厂商预设 / 深度思考
 
 启动: python server.py  (或双击 run.bat)
 默认地址: http://127.0.0.1:8321
@@ -44,10 +44,10 @@ DEFAULT_CONFIG = {
     "model": "deepseek-chat",
     "prompt": DEFAULT_PROMPT,
     "temperature": 0.8,
-    "context_len": 10,      # 上下文记忆轮数（0=单轮）
-    "voice": False,         # 自动朗读回复
-    "reasoning": False,     # 深度思考（推理模型）
-    "reasoning_model": "",  # 自定义推理模型（留空自动按厂商匹配）
+    "context_len": 10,
+    "voice": False,
+    "reasoning": False,
+    "reasoning_model": "",
 }
 
 PRESETS = [
@@ -79,7 +79,6 @@ def save_config(cfg):
 
 # ---------------- 流式聊天（OpenAI 兼容） ----------------
 def build_messages(cfg, history):
-    """history: [{role, content}...]；按 context_len 截断，只保留最近 N 轮；最前插入系统提示词"""
     clen = int(cfg.get("context_len", 10) or 0)
     if clen > 0 and len(history) > clen * 2:
         history = history[-(clen * 2):]
@@ -91,7 +90,6 @@ def build_messages(cfg, history):
 
 
 def chat_stream_yield(cfg, history, req_model=None):
-    """生成器：逐段产出 SSE 文本；reasoning 模型时 delta.reasoning_content 以 {"reasoning":...} 转发"""
     url = (cfg.get("base_url") or "").rstrip("/") + "/chat/completions"
     model = req_model or cfg.get("model") or "deepseek-chat"
     payload = {
@@ -135,7 +133,7 @@ def chat_stream_yield(cfg, history, req_model=None):
         yield "data: " + json.dumps({"error": str(e)}, ensure_ascii=False) + "\n\n"
 
 
-# ---------------- 网页 UI ----------------
+# ---------------- 网页 UI（v0.3.0 美化版） ----------------
 HTML = r"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -143,100 +141,154 @@ HTML = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>喵酱 Chat</title>
 <style>
-:root{--pink:#ff7eb3;--purple:#8f6bff;--bg1:#fff0f6;--bg2:#f0e9ff;--card:#fff;
---fg:#3d3a4a;--dim:#9a92ab;--mine:#ff7eb3;--line:#f0e6f2}
+:root{--pink:#ff6fa5;--pink2:#ff9ab8;--purple:#8f6bff;--purple2:#b49bff;
+--bg1:#ffeef5;--bg2:#f3ecff;--fg:#3d3550;--dim:#a394b8;--line:rgba(255,126,179,.18);
+--shadow:0 6px 24px rgba(255,126,179,.18)}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
-background:linear-gradient(160deg,var(--bg1),var(--bg2));color:var(--fg);display:flex;flex-direction:column;overflow:hidden}
-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;
-background:rgba(255,255,255,.72);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);flex:0 0 auto}
-header .title{font-size:18px;font-weight:800;background:linear-gradient(90deg,var(--pink),var(--purple));
--webkit-background-clip:text;background-clip:text;color:transparent}
-header .sub{font-size:11px;color:var(--dim);margin-top:2px}
-.icon-btn{width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:#fff;
-font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
-.icon-btn:hover{background:#fff0f6}
-main{flex:1 1 auto;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth}
-.msg{display:flex;gap:10px;max-width:92%;animation:pop .25s ease}
-@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
-.msg .avatar{width:36px;height:36px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px rgba(255,126,179,.35)}
+background:linear-gradient(160deg,var(--bg1) 0%,#fde3f0 45%,var(--bg2) 100%);
+color:var(--fg);display:flex;flex-direction:column;overflow:hidden;position:relative}
+/* 漂浮装饰（猫爪/星星） */
+.decor{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.decor span{position:absolute;font-size:26px;opacity:.14;animation:float 9s ease-in-out infinite;filter:blur(.4px)}
+.decor span:nth-child(1){left:6%;top:18%;animation-delay:0s}
+.decor span:nth-child(2){left:88%;top:12%;animation-delay:1.6s;font-size:20px}
+.decor span:nth-child(3){left:78%;top:70%;animation-delay:3.2s}
+.decor span:nth-child(4){left:12%;top:78%;animation-delay:4.8s;font-size:20px}
+.decor span:nth-child(5){left:45%;top:6%;animation-delay:2.4s;font-size:18px}
+.decor span:nth-child(6){left:60%;top:85%;animation-delay:6s}
+@keyframes float{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-22px) rotate(8deg)}}
+/* 顶部 */
+header{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;
+padding:16px 22px;background:rgba(255,255,255,.55);backdrop-filter:blur(18px) saturate(1.4);
+border-bottom:1px solid var(--line);flex:0 0 auto}
+.ears{position:absolute;top:-14px;left:26px;width:64px;height:30px;pointer-events:none}
+.ears span{position:absolute;width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;border-bottom:30px solid rgba(255,126,179,.25)}
+.ears span:first-child{left:0;transform:rotate(-18deg)}
+.ears span:last-child{right:0;transform:rotate(18deg)}
+header .title{font-size:20px;font-weight:800;letter-spacing:.5px;
+background:linear-gradient(90deg,#ff6fa5,#8f6bff);-webkit-background-clip:text;background-clip:text;color:transparent}
+header .sub{font-size:11px;color:var(--dim);margin-top:3px;display:flex;align-items:center;gap:5px}
+.dot{width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399}
+.icon-btn{width:40px;height:40px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.8);
+font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.25s;box-shadow:0 2px 10px rgba(255,126,179,.12)}
+.icon-btn:hover{transform:rotate(20deg) scale(1.06);background:#fff;box-shadow:0 4px 16px rgba(255,126,179,.3)}
+/* 消息区 */
+main{position:relative;z-index:1;flex:1 1 auto;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:16px;scroll-behavior:smooth}
+main::-webkit-scrollbar{width:7px}
+main::-webkit-scrollbar-thumb{background:linear-gradient(var(--pink),var(--purple));border-radius:99px}
+.msg{display:flex;gap:12px;max-width:86%;animation:popIn .3s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes popIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+.msg .avatar{width:40px;height:40px;border-radius:50%;flex:0 0 auto;position:relative;overflow:visible}
+.msg .avatar svg{width:100%;height:100%;display:block;border-radius:50%}
 .msg.user{align-self:flex-end;flex-direction:row-reverse}
-.msg.user .avatar{background:linear-gradient(135deg,var(--pink),#ff9a76)}
-.msg.ai .avatar{background:linear-gradient(135deg,#cba6ff,#8f6bff)}
-.bubble{padding:11px 15px;border-radius:18px;font-size:15px;line-height:1.65;word-break:break-word;white-space:pre-wrap}
-.msg.user .bubble{background:linear-gradient(135deg,var(--pink),#ff8fa3);color:#fff;border-bottom-right-radius:5px}
-.msg.ai .bubble{background:#fff;border:1px solid var(--line);border-bottom-left-radius:5px;box-shadow:0 2px 10px rgba(143,107,255,.08)}
-.msg.ai .bubble.typing::after{content:"▋";animation:blink 1s steps(1) infinite;color:var(--pink)}
+.msg.user .avatar{background:linear-gradient(135deg,#ffb35c,#ff8fa3);box-shadow:0 3px 12px rgba(255,143,163,.45)}
+.msg.ai .avatar{background:linear-gradient(135deg,#e3d5ff,#a78bfa);box-shadow:0 3px 12px rgba(143,107,255,.4)}
+.msg .avatar::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid transparent;
+background:linear-gradient(135deg,var(--pink),var(--purple)) border-box;-webkit-mask:linear-gradient(#fff 0 0) padding-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.7}
+.msg .bubble{padding:12px 17px;border-radius:20px;font-size:15px;line-height:1.7;word-break:break-word;white-space:pre-wrap;position:relative}
+.msg.user .bubble{background:linear-gradient(135deg,var(--pink),#ff8fa3);color:#fff;border-bottom-right-radius:6px;
+box-shadow:0 5px 18px rgba(255,126,179,.35)}
+.msg.ai .bubble{background:rgba(255,255,255,.92);border:1px solid rgba(255,126,179,.14);
+border-bottom-left-radius:6px;box-shadow:0 6px 24px rgba(143,107,255,.1)}
+.msg.ai .bubble::before{content:"";position:absolute;top:0;left:12px;right:12px;height:2.5px;border-radius:99px;
+background:linear-gradient(90deg,var(--pink),var(--purple),transparent)}
+.msg.ai .bubble.typing::after{content:"▋";animation:blink 1s steps(1) infinite;color:var(--pink);font-weight:700}
 @keyframes blink{50%{opacity:0}}
-.msg.err .bubble{background:#ffe8e8;border-color:#ffb3b3;color:#c0392b}
-.think{margin:0 0 8px;border:1px dashed #c9b8ff;border-radius:10px;background:#f7f3ff;overflow:hidden}
-.think-head{padding:6px 10px;font-size:12px;color:#7a5fd0;cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px}
-.think-head .arrow{transition:.2s}
+.msg.err .bubble{background:#fff0f0;border-color:#ffc9c9;color:#d0485a}
+/* 思考过程 */
+.think{margin:0 0 9px;border:1px dashed rgba(143,107,255,.4);border-radius:12px;background:rgba(247,243,255,.8);overflow:hidden;backdrop-filter:blur(4px)}
+.think-head{padding:7px 12px;font-size:12px;color:#7a5fd0;cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px;font-weight:600}
+.think-head .arrow{transition:.25s;font-size:10px}
 .think.open .arrow{transform:rotate(90deg)}
-.think-body{display:none;padding:0 12px 10px;font-size:13px;color:#8a7bb8;line-height:1.6;white-space:pre-wrap}
+.think-body{display:none;padding:0 13px 11px;font-size:13px;color:#8a7bb8;line-height:1.65;white-space:pre-wrap}
 .think.open .think-body{display:block}
-.voice-btn{border:none;background:transparent;cursor:pointer;font-size:15px;padding:4px;opacity:.55;transition:.15s;line-height:1}
-.voice-btn:hover{opacity:1}
-.voice-btn.speaking{opacity:1;animation:speak 1s infinite}
-@keyframes speak{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
-footer{flex:0 0 auto;padding:10px 12px calc(12px + env(safe-area-inset-bottom));
-background:rgba(255,255,255,.8);backdrop-filter:blur(12px);border-top:1px solid var(--line)}
-.input-bar{display:flex;gap:10px;align-items:flex-end}
-textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:18px;padding:12px 16px;
-font-size:15px;font-family:inherit;max-height:120px;min-height:46px;outline:none;background:#fff;color:var(--fg)}
-textarea:focus{border-color:var(--pink);box-shadow:0 0 0 3px rgba(255,126,179,.15)}
-.round-btn{width:46px;height:46px;border:1px solid var(--line);border-radius:50%;cursor:pointer;flex:0 0 auto;
-background:#fff;font-size:19px;display:flex;align-items:center;justify-content:center;transition:.15s}
-.round-btn:active{transform:scale(.92)}
-.round-btn.active{background:linear-gradient(135deg,#f87171,#ef4444);color:#fff;border:none;animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 10px rgba(239,68,68,0)}}
-.send-btn{width:46px;height:46px;border:none;border-radius:50%;cursor:pointer;flex:0 0 auto;
-background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;font-size:20px;
-display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(143,107,255,.4);transition:.15s}
-.send-btn:active{transform:scale(.92)}
-.send-btn:disabled{opacity:.5}
-.overlay{position:fixed;inset:0;background:rgba(61,58,74,.45);backdrop-filter:blur(4px);display:none;z-index:50;align-items:flex-end;justify-content:center}
+/* 语音按钮 */
+.voice-btn{border:none;background:transparent;cursor:pointer;font-size:15px;padding:5px;opacity:.5;transition:.2s;line-height:1}
+.voice-btn:hover{opacity:1;transform:scale(1.15)}
+.voice-btn.speaking{opacity:1;animation:speakPulse 1s infinite}
+@keyframes speakPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
+/* 底部输入 */
+footer{position:relative;z-index:2;flex:0 0 auto;padding:12px 18px calc(14px + env(safe-area-inset-bottom));
+background:rgba(255,255,255,.7);backdrop-filter:blur(18px) saturate(1.4);border-top:1px solid var(--line)}
+.input-bar{display:flex;gap:10px;align-items:flex-end;max-width:960px;margin:0 auto}
+textarea{flex:1;resize:none;border:2px solid transparent;border-radius:22px;padding:13px 20px;
+font-size:15px;font-family:inherit;max-height:130px;min-height:48px;outline:none;background:#fff;color:var(--fg);
+box-shadow:0 4px 18px rgba(255,126,179,.12);transition:.25s}
+textarea:focus{border-color:var(--pink);box-shadow:0 6px 26px rgba(255,126,179,.28)}
+.round-btn{width:48px;height:48px;border:2px solid rgba(255,126,179,.25);border-radius:50%;cursor:pointer;flex:0 0 auto;
+background:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;transition:.2s;box-shadow:0 4px 14px rgba(255,126,179,.15)}
+.round-btn:hover{transform:scale(1.08);border-color:var(--pink)}
+.round-btn.active{background:linear-gradient(135deg,#f87171,#ef4444);color:#fff;border:none;animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.45)}50%{box-shadow:0 0 0 12px rgba(239,68,68,0)}}
+.send-btn{width:48px;height:48px;border:none;border-radius:50%;cursor:pointer;flex:0 0 auto;color:#fff;font-size:21px;
+background:linear-gradient(135deg,var(--pink),var(--purple));position:relative;overflow:hidden;
+display:flex;align-items:center;justify-content:center;box-shadow:0 5px 18px rgba(143,107,255,.45);transition:.18s}
+.send-btn::after{content:"";position:absolute;top:-50%;left:-50%;width:200%;height:200%;
+background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.35) 50%,transparent 60%);animation:sheen 3s infinite}
+@keyframes sheen{0%{transform:translateX(-60%)}60%,100%{transform:translateX(60%)}}
+.send-btn:hover{transform:scale(1.08) rotate(-4deg)}
+.send-btn:active{transform:scale(.9)}
+.send-btn:disabled{opacity:.5;transform:none}
+/* 设置面板 */
+.overlay{position:fixed;inset:0;background:rgba(61,53,80,.4);backdrop-filter:blur(6px);display:none;z-index:50;align-items:flex-end;justify-content:center}
 .overlay.show{display:flex}
-.sheet{width:100%;max-width:640px;background:#fff;border-radius:24px 24px 0 0;padding:20px 20px 30px;
-max-height:88vh;overflow-y:auto;animation:up .3s ease}
-@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
-.sheet h2{font-size:18px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
-.field{margin-bottom:14px}
-.field label{display:block;font-size:12px;color:var(--dim);margin-bottom:6px;font-weight:600}
-.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:12px;
-padding:10px 12px;font-size:14px;font-family:inherit;outline:none;background:#faf8ff;color:var(--fg)}
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--pink)}
-.field textarea{min-height:100px;line-height:1.5}
-.field .hint{font-size:11px;color:var(--dim);margin-top:4px}
-.preset-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
-.preset-chip{padding:5px 12px;border-radius:999px;border:1px solid var(--line);font-size:12px;cursor:pointer;background:#fff;transition:.15s}
-.preset-chip.active{background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;border:none}
-.toggle-row{display:flex;align-items:center;justify-content:space-between;background:#faf8ff;
-border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:8px;cursor:pointer}
-.toggle-row .t-label{font-size:14px;font-weight:600}
-.toggle-row .t-desc{font-size:11px;color:var(--dim);margin-top:2px}
-.switch{width:46px;height:26px;border-radius:999px;background:#ddd;position:relative;transition:.2s;flex:0 0 auto}
-.switch::after{content:"";position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.sheet{width:100%;max-width:620px;background:rgba(255,255,255,.96);backdrop-filter:blur(20px);
+border-radius:28px 28px 0 0;padding:24px 24px 34px;max-height:90vh;overflow-y:auto;animation:sheetUp .35s cubic-bezier(.2,.9,.3,1.1);box-shadow:0 -8px 40px rgba(143,107,255,.2)}
+.sheet::-webkit-scrollbar{width:6px}
+.sheet::-webkit-scrollbar-thumb{background:var(--pink);border-radius:99px}
+@keyframes sheetUp{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
+.sheet h2{font-size:19px;margin-bottom:16px;display:flex;align-items:center;gap:8px;
+background:linear-gradient(90deg,var(--pink),var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent}
+.field{margin-bottom:15px}
+.field label{display:block;font-size:12px;color:var(--dim);margin-bottom:6px;font-weight:700;letter-spacing:.3px}
+.field input,.field select,.field textarea{width:100%;border:2px solid var(--line);border-radius:14px;
+padding:11px 14px;font-size:14px;font-family:inherit;outline:none;background:#fdf9ff;color:var(--fg);transition:.2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--pink);background:#fff;box-shadow:0 0 0 4px rgba(255,126,179,.12)}
+.field textarea{min-height:100px;line-height:1.55}
+.field .hint{font-size:11px;color:var(--dim);margin-top:5px}
+.preset-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:7px}
+.preset-chip{padding:6px 13px;border-radius:999px;border:1px solid var(--line);font-size:12px;cursor:pointer;background:#fff;transition:.2s;font-weight:600}
+.preset-chip:hover{border-color:var(--pink);transform:translateY(-1px)}
+.preset-chip.active{background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;border:none;box-shadow:0 4px 12px rgba(143,107,255,.35)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;background:#fdf9ff;
+border:2px solid var(--line);border-radius:14px;padding:11px 15px;margin-bottom:9px;cursor:pointer;transition:.2s}
+.toggle-row:hover{border-color:var(--pink)}
+.toggle-row .t-label{font-size:14px;font-weight:700}
+.toggle-row .t-desc{font-size:11px;color:var(--dim);margin-top:3px}
+.switch{width:48px;height:27px;border-radius:999px;background:#e5dfed;position:relative;transition:.25s;flex:0 0 auto;box-shadow:inset 0 2px 5px rgba(0,0,0,.08)}
+.switch::after{content:"";position:absolute;width:21px;height:21px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.25s;box-shadow:0 2px 6px rgba(0,0,0,.25)}
 .switch.on{background:linear-gradient(90deg,var(--pink),var(--purple))}
-.switch.on::after{left:23px}
-.btn-primary{width:100%;padding:13px;border:none;border-radius:14px;cursor:pointer;font-size:16px;font-weight:700;color:#fff;
-background:linear-gradient(135deg,var(--pink),var(--purple));box-shadow:0 4px 14px rgba(143,107,255,.35)}
-.btn-primary:active{transform:scale(.98)}
-.btn-danger{width:100%;padding:10px;border:1px solid #ffb3b3;border-radius:12px;background:#fff5f5;color:#c0392b;font-size:13px;cursor:pointer;margin-top:8px}
-.hint-banner{background:#fff3cd;border:1px solid #ffe08a;color:#8a6d1a;border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.6;margin-bottom:10px}
-.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--dim);gap:10px;padding:40px 20px;text-align:center}
-.empty .big{font-size:64px;animation:bounce 2s infinite}
-@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-.empty p{font-size:14px;line-height:1.7}
-@media(min-width:700px){.overlay{align-items:center}.sheet{border-radius:24px;max-height:85vh}}
+.switch.on::after{left:24px;box-shadow:0 2px 8px rgba(143,107,255,.5)}
+input[type=range]{-webkit-appearance:none;height:8px;border-radius:99px;background:linear-gradient(90deg,var(--pink),var(--purple));outline:none;padding:0;border:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;
+border:3px solid var(--pink);box-shadow:0 2px 10px rgba(255,126,179,.4);cursor:pointer;transition:.15s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.15)}
+.btn-primary{width:100%;padding:14px;border:none;border-radius:16px;cursor:pointer;font-size:16px;font-weight:800;color:#fff;letter-spacing:1px;
+background:linear-gradient(135deg,var(--pink),var(--purple));box-shadow:0 6px 20px rgba(143,107,255,.4);transition:.2s;position:relative;overflow:hidden}
+.btn-primary::after{content:"";position:absolute;top:-50%;left:-50%;width:200%;height:200%;
+background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.3) 50%,transparent 60%);animation:sheen 3s infinite}
+.btn-primary:hover{transform:translateY(-2px)}
+.btn-primary:active{transform:scale(.97)}
+.btn-danger{width:100%;padding:10px;border:1px solid #ffc4c4;border-radius:13px;background:#fff7f7;color:#d0485a;font-size:13px;cursor:pointer;margin-top:10px;transition:.2s}
+.btn-danger:hover{background:#ffecec}
+.hint-banner{background:linear-gradient(90deg,#fff7dc,#ffeef0);border:1px solid #ffdf9e;color:#a0761f;
+border-radius:14px;padding:11px 16px;font-size:13px;line-height:1.6;margin-bottom:12px}
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--dim);gap:12px;padding:40px 20px;text-align:center}
+.empty .big{font-size:72px;animation:bounce 2.4s ease-in-out infinite;filter:drop-shadow(0 6px 14px rgba(255,126,179,.4))}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.empty p{font-size:14px;line-height:1.9;color:#b9a7cc}
+@media(min-width:700px){.overlay{align-items:center}.sheet{border-radius:28px;max-height:86vh}}
 </style>
 </head>
 <body>
+<div class="decor"><span>🐾</span><span>✨</span><span>🐾</span><span>🌸</span><span>✨</span><span>🐾</span></div>
 <header>
+  <div class="ears"><span></span><span></span></div>
   <div>
     <div class="title">🐱 喵酱 Chat</div>
-    <div class="sub">猫娘 AI 陪伴助手 · v0.2.0</div>
+    <div class="sub"><span class="dot"></span>猫娘 AI 陪伴助手 · v0.3.0</div>
   </div>
   <button class="icon-btn" id="btnSettings" title="设置">⚙️</button>
 </header>
@@ -363,9 +415,13 @@ function addMsg(role,text){
   const box=$("chatBox");
   const wrap=document.createElement("div");
   wrap.className="msg "+role;
-  const extra=role==="ai"?'<div class="avatar">🐱</div><div style="flex:1;min-width:0">'
-                        :'<div class="avatar">🐰</div><div style="flex:1;min-width:0">';
-  wrap.innerHTML=extra+'<div class="think" style="display:none"><div class="think-head"><span class="arrow">▶</span>🤔 思考过程</div><div class="think-body"></div></div><div class="bubble"></div></div>';
+  let avatar;
+  if(role==="ai"){
+    avatar='<div class="avatar"><svg viewBox="0 0 100 100"><circle cx="50" cy="54" r="36" fill="url(#g)"/><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6d9ff"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><path d="M18 40 L30 22 L42 36 Z" fill="#c9b3ff"/><path d="M82 40 L70 22 L58 36 Z" fill="#c9b3ff"/><circle cx="38" cy="52" r="4" fill="#5b3a8e"/><circle cx="62" cy="52" r="4" fill="#5b3a8e"/><path d="M44 66 Q50 72 56 66" stroke="#ff6fa5" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M34 62 L22 58 M66 62 L78 58" stroke="#c9b3ff" stroke-width="2.5" stroke-linecap="round"/></svg></div>';
+  }else{
+    avatar='<div class="avatar"><svg viewBox="0 0 100 100"><circle cx="50" cy="52" r="34" fill="#ffd9c4"/><circle cx="32" cy="34" r="14" fill="#ffd9c4"/><circle cx="68" cy="34" r="14" fill="#ffd9c4"/><circle cx="38" cy="50" r="3.5" fill="#5b3a2e"/><circle cx="62" cy="50" r="3.5" fill="#5b3a2e"/><path d="M46 60 Q50 64 54 60" stroke="#e08a5e" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg></div>';
+  }
+  wrap.innerHTML=avatar+'<div style="flex:1;min-width:0"><div class="think" style="display:none"><div class="think-head"><span class="arrow">▶</span>🤔 思考过程</div><div class="think-body"></div></div><div class="bubble"></div></div>';
   const b=wrap.querySelector(".bubble");
   b.textContent=text;
   const t=wrap.querySelector(".think");
@@ -383,7 +439,6 @@ function addMsg(role,text){
   return {wrap,b,t,tb};
 }
 
-// ---- 语音朗读 ----
 function speak(text,btn){
   if(!window.speechSynthesis){alert("当前浏览器不支持语音朗读");return}
   speechSynthesis.cancel();
@@ -398,7 +453,6 @@ function speak(text,btn){
 function stopSpeak(){if(window.speechSynthesis)speechSynthesis.cancel();if(speaker&&speaker.btn)speaker.btn.classList.remove("speaking");speaker=null}
 if(window.speechSynthesis)speechSynthesis.getVoices();
 
-// ---- 语音输入 ----
 let recognizer=null;
 function startMic(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -417,7 +471,6 @@ function startMic(){
 }
 $("btnMic").onclick=startMic;
 
-// ---- 发送 ----
 async function send(){
   if(busy)return;
   const text=$("input").value.trim();
@@ -466,7 +519,7 @@ async function send(){
 }
 $("btnSend").onclick=send;
 $("input").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}autoGrow()});
-function autoGrow(){const t=$("input");t.style.height="auto";t.style.height=Math.min(t.scrollHeight,120)+"px"}
+function autoGrow(){const t=$("input");t.style.height="auto";t.style.height=Math.min(t.scrollHeight,130)+"px"}
 
 $("btnSettings").onclick=()=>{$("settings").classList.add("show")};
 $("settings").addEventListener("click",e=>{if(e.target===$("settings"))$("settings").classList.remove("show")});
@@ -492,7 +545,7 @@ $("btnClear").onclick=async()=>{
   addMsg("ai","好的喵，喵酱已经把之前的话都忘掉了～ 我们重新开始吧！");
 };
 loadCfg();
-addMsg("ai","喵～主人好！我是喵酱 🐱 v0.2.0 新功能上线：\n• 🧠 深度思考开关\n• 🔉 AI 语音朗读（每条回复可点 🔊）\n• 🎤 语音输入（点麦克风说话）\n• 💬 上下文记忆长度可调\n• 🏭 厂商一键切换 + 自定义 API\n右上角 ⚙️ 设置里都可以调整哦！");
+addMsg("ai","喵～主人好！我是喵酱 🐱 v0.3.0 美化版上线啦！\n✨ 猫耳标题 · 漂浮猫爪背景 · 渐变气泡\n🧠 深度思考 · 🔉 语音朗读 · 🎤 语音输入\n💬 记忆长度可调 · 🏭 厂商切换/自定义 API\n右上角 ⚙️ 设置里都可以调整哦！");
 </script>
 </body>
 </html>"""
@@ -561,7 +614,7 @@ class Handler(BaseHTTPRequestHandler):
 def start():
     srv = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     print("=" * 46)
-    print("   🐱  喵酱 Chat v0.2.0 已启动")
+    print("   🐱  喵酱 Chat v0.3.0 已启动")
     print(f"   🌐  打开: http://127.0.0.1:{PORT}")
     print("       手机同 WiFi 访问: http://<本机IP>:%d" % PORT)
     print("       关闭本窗口即退出。")

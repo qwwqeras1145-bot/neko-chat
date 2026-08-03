@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 猫脸 -->
+    <path
+        android:fillColor="#FFE4E9F2"
+        android:pathData="M54,44 m-30,0 a30,30 0 1,0 60,0 a30,30 0 1,0 -60,0" />
+    <!-- 左耳 -->
+    <path
+        android:fillColor="#E8D9FF"
+        android:pathData="M26,46 L32,20 L48,34 Z" />
+    <!-- 右耳 -->
+    <path
+        android:fillColor="#E8D9FF"
+        android:pathData="M82,46 L76,20 L60,34 Z" />
+    <!-- 左眼 -->
+    <path
+        android:fillColor="#5B3A8E"
+        android:pathData="M42,54 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" />
+    <!-- 右眼 -->
+    <path
+        android:fillColor="#5B3A8E"
+        android:pathData="M66,54 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" />
+    <!-- 小嘴 -->
+    <path
+        android:strokeColor="#FF6FA5"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M49,66 Q54,72 59,66" />
+    <!-- 胡须 -->
+    <path
+        android:strokeColor="#C9B3FF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M36,61 L24,57 M72,61 L84,57" />
+</vector>

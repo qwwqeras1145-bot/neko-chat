@@ -1,0 +1,2 @@
+# 此目录放 app 页面（index.html），CI 构建时自动从 mobile/ 复制
+# 本地构建：复制 mobile/index.html 到这里
