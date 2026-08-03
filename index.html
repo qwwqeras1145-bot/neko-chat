@@ -169,6 +169,14 @@ background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.3) 50%,trans
       </div>
     </div>
     <div class="field">
+      <label>🐱 AI 头像</label>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <img id="aiAvatarPrev" style="width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid var(--line);background:#f3ecff">
+        <button type="button" class="btn small" style="flex:0 0 auto;padding:8px 14px" onclick="pickAiAvatar()">📷 上传 AI 头像</button>
+        <button type="button" class="btn small ghost" style="flex:0 0 auto;padding:8px 14px" onclick="clearAiAvatar()">恢复默认</button>
+      </div>
+    </div>
+    <div class="field">
       <label>API Base URL</label>
       <input id="cfgBaseUrl" placeholder="https://api.deepseek.com/v1">
       <div class="hint">若提示跨域(CORS)，换支持浏览器直连的服务商或用电脑端</div>
@@ -253,6 +261,7 @@ function loadCfg(){
   $("cfgModel").value=cfg.model||"";
   $("cfgReasonModel").value=cfg.reasoning_model||"";
   $("avatarPrev").src=cfg.avatar||"";
+  $("aiAvatarPrev").src=cfg.ai_avatar||"";
   $("cfgPrompt").value=cfg.prompt||DEFAULT_PROMPT;
   $("cfgTemp").value=cfg.temperature||0.8;$("tempVal").textContent=cfg.temperature||0.8;
   $("cfgCtx").value=cfg.context_len||10;$("ctxVal").textContent=cfg.context_len||10;
@@ -284,7 +293,7 @@ function saveCfg(){
        model:$("cfgModel").value.trim(),prompt:$("cfgPrompt").value,
        temperature:parseFloat($("cfgTemp").value),unlimited_memory:isOn("swMemory"),context_len:parseInt($("cfgCtx").value),
        voice:isOn("swVoice"),reasoning:isOn("swReasoning"),reasoning_model:$("cfgReasonModel").value.trim(),
-       avatar:cfg.avatar||""};
+       avatar:cfg.avatar||"",ai_avatar:cfg.ai_avatar||""};
   localStorage.setItem("neko_cfg",JSON.stringify(cfg));
 }
 function pickAvatar(){
@@ -317,6 +326,36 @@ function pickAvatar(){
   inp.click();
 }
 function clearAvatar(){cfg.avatar="";$("avatarPrev").src="";saveCfg();toast("已恢复默认头像")}
+function pickAiAvatar(){
+  const inp=document.createElement("input");
+  inp.type="file";inp.accept="image/*";
+  inp.style.cssText="position:fixed;left:-9999px;top:0;opacity:0";
+  document.body.appendChild(inp);
+  inp.onchange=()=>{
+    const f=inp.files[0];
+    inp.remove();
+    if(!f)return;
+    const rd=new FileReader();
+    rd.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        const c=document.createElement("canvas");c.width=c.height=128;
+        const ctx=c.getContext("2d");
+        ctx.beginPath();ctx.arc(64,64,64,0,Math.PI*2);ctx.clip();
+        const s=Math.min(128/img.width,128/img.height),w=img.width*s,h=img.height*s;
+        ctx.drawImage(img,(128-w)/2,(128-h)/2,w,h);
+        cfg.ai_avatar=c.toDataURL("image/jpeg",0.85);
+        $("aiAvatarPrev").src=cfg.ai_avatar;
+        saveCfg();toast("AI 头像更新成功喵～ 🐱");
+      };
+      img.src=e.target.result;
+    };
+    rd.readAsDataURL(f);
+  };
+  try{inp.oncancel=()=>inp.remove()}catch(e){}
+  inp.click();
+}
+function clearAiAvatar(){cfg.ai_avatar="";$("aiAvatarPrev").src="";saveCfg();toast("已恢复默认 AI 头像")}
 function setSwitch(id,on){const el=$(id);el.classList.toggle("on",on);el.dataset.on=on?"1":"0"}
 function isOn(id){return $(id).dataset.on==="1"}
 function showSetup(){$("settings").classList.add("show")}
@@ -329,7 +368,7 @@ function addMsg(role,text){
   wrap.className="msg "+role;
   let avatar;
   if(role==="ai"){
-    avatar='<div class="avatar"><svg viewBox="0 0 100 100"><circle cx="50" cy="54" r="36" fill="url(#ga)"/><defs><linearGradient id="ga" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6d9ff"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><path d="M18 40 L30 22 L42 36 Z" fill="#c9b3ff"/><path d="M82 40 L70 22 L58 36 Z" fill="#c9b3ff"/><circle cx="38" cy="52" r="4" fill="#5b3a8e"/><circle cx="62" cy="52" r="4" fill="#5b3a8e"/><path d="M44 66 Q50 72 56 66" stroke="#ff6fa5" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M34 62 L22 58 M66 62 L78 58" stroke="#c9b3ff" stroke-width="2.5" stroke-linecap="round"/></svg></div>';
+    avatar=cfg&&cfg.ai_avatar?'<div class="avatar" style="overflow:hidden;background:#f3ecff"><img src="'+cfg.ai_avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>':'<div class="avatar"><svg viewBox="0 0 100 100"><circle cx="50" cy="54" r="36" fill="url(#ga)"/><defs><linearGradient id="ga" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6d9ff"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><path d="M18 40 L30 22 L42 36 Z" fill="#c9b3ff"/><path d="M82 40 L70 22 L58 36 Z" fill="#c9b3ff"/><circle cx="38" cy="52" r="4" fill="#5b3a8e"/><circle cx="62" cy="52" r="4" fill="#5b3a8e"/><path d="M44 66 Q50 72 56 66" stroke="#ff6fa5" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M34 62 L22 58 M66 62 L78 58" stroke="#c9b3ff" stroke-width="2.5" stroke-linecap="round"/></svg></div>';
   }else{
     avatar=cfg&&cfg.avatar?'<div class="avatar" style="overflow:hidden;background:#f3ecff"><img src="'+cfg.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>':'<div class="avatar"><svg viewBox="0 0 100 100"><circle cx="50" cy="52" r="34" fill="#ffd9c4"/><circle cx="32" cy="34" r="14" fill="#ffd9c4"/><circle cx="68" cy="34" r="14" fill="#ffd9c4"/><circle cx="38" cy="50" r="3.5" fill="#5b3a2e"/><circle cx="62" cy="50" r="3.5" fill="#5b3a2e"/><path d="M46 60 Q50 64 54 60" stroke="#e08a5e" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg></div>';
   }
