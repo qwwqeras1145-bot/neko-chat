@@ -134,7 +134,7 @@ background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.3) 50%,trans
   <div class="ears"><span></span><span></span></div>
   <div>
     <div class="title">🐱 喵酱 Chat</div>
-    <div class="sub"><span class="dot"></span>猫娘 AI 陪伴助手 · v0.3.0</div>
+    <div class="sub"><span class="dot"></span>猫娘 AI 陪伴助手 · v0.4.0</div>
   </div>
   <button class="icon-btn" id="btnSettings">⚙️</button>
 </header>
@@ -184,8 +184,15 @@ background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.3) 50%,trans
       <label>推理模型（留空自动匹配厂商）</label>
       <input id="cfgReasonModel" placeholder="如 deepseek-reasoner / o3-mini">
     </div>
-    <div class="field">
-      <label>💬 上下文记忆：<span id="ctxVal">10</span> 轮（0 = 每句独立）</label>
+    <div class="toggle-row" id="rowMemory">
+      <div>
+        <div class="t-label">♾️ 无限记忆</div>
+        <div class="t-desc">记住全部对话，随时聊起以前的事</div>
+      </div>
+      <div class="switch" id="swMemory"></div>
+    </div>
+    <div class="field" id="ctxField" style="display:none">
+      <label>💬 记忆轮数：<span id="ctxVal">10</span> 轮（0 = 每句独立）</label>
       <input id="cfgCtx" type="range" min="0" max="30" step="1" value="10" style="width:100%">
     </div>
     <div class="toggle-row" id="rowVoice">
@@ -240,6 +247,7 @@ function loadCfg(){
   $("cfgPrompt").value=cfg.prompt||DEFAULT_PROMPT;
   $("cfgTemp").value=cfg.temperature||0.8;$("tempVal").textContent=cfg.temperature||0.8;
   $("cfgCtx").value=cfg.context_len||10;$("ctxVal").textContent=cfg.context_len||10;
+  setSwitch("swMemory",cfg.unlimited_memory!==false);$("ctxField").style.display=cfg.unlimited_memory!==false?"none":"block";
   setSwitch("swReasoning",!!cfg.reasoning);$("reasonModelField").style.display=cfg.reasoning?"block":"none";
   setSwitch("swVoice",!!cfg.voice);
   PRESETS.forEach((p,i)=>{
@@ -258,7 +266,7 @@ function loadCfg(){
 function saveCfg(){
   cfg={base_url:$("cfgBaseUrl").value.trim(),api_key:$("cfgApiKey").value.trim(),
        model:$("cfgModel").value.trim(),prompt:$("cfgPrompt").value,
-       temperature:parseFloat($("cfgTemp").value),context_len:parseInt($("cfgCtx").value),
+       temperature:parseFloat($("cfgTemp").value),unlimited_memory:isOn("swMemory"),context_len:parseInt($("cfgCtx").value),
        voice:isOn("swVoice"),reasoning:isOn("swReasoning"),reasoning_model:$("cfgReasonModel").value.trim()};
   localStorage.setItem("neko_cfg",JSON.stringify(cfg));
 }
@@ -307,8 +315,14 @@ function stopSpeak(){if(window.speechSynthesis)speechSynthesis.cancel();if(speak
 
 let recognizer=null;
 function startMic(){
+  // 手机 APP（Android WebView）：使用原生语音识别
+  if(window.Android&&window.Android.startSpeech){
+    $("btnMic").classList.add("active");
+    window.Android.startSpeech();
+    return;
+  }
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){alert("当前浏览器/设备不支持语音输入，请手动打字或使用电脑端");return}
+  if(!SR){alert("当前浏览器/设备不支持语音输入，请手动打字或使用手机 APP/电脑端");return}
   if(recognizer){recognizer.stop();recognizer=null;$("btnMic").classList.remove("active");return}
   recognizer=new SR();
   recognizer.lang="zh-CN";recognizer.interimResults=true;recognizer.continuous=false;
@@ -317,10 +331,17 @@ function startMic(){
     for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;
     $("input").value=t;
   };
-  recognizer.onend=()=>{recognizer=null;$("btnMic").classList.remove("active")};
+  recognizer.onend=()=>{
+    recognizer=null;$("btnMic").classList.remove("active");
+    const t=$("input").value.trim();
+    if(t){send()}
+  };
   recognizer.onerror=()=>{recognizer=null;$("btnMic").classList.remove("active")};
   recognizer.start();$("btnMic").classList.add("active");
 }
+// 手机 APP 原生语音识别回调：识别完成自动发送
+window.__speechResult=function(t){$("btnMic").classList.remove("active");if(t&&t.trim()){$("input").value=t;send()}};
+window.__speechError=function(m){$("btnMic").classList.remove("active");alert(m||"语音识别不可用，请检查手机语音服务")};
 $("btnMic").onclick=startMic;
 
 async function send(){
@@ -331,9 +352,11 @@ async function send(){
   $("input").value="";
   addMsg("user",text);
   history.push({role:"user",content:text});
-  const ctx=parseInt(cfg.context_len||10);
-  if(ctx===0)history=history.slice(-1);
-  else if(history.length>ctx*2)history=history.slice(-(ctx*2));
+  if(!cfg.unlimited_memory){
+    const ctx=parseInt(cfg.context_len||10);
+    if(ctx===0)history=history.slice(-1);
+    else if(history.length>ctx*2)history=history.slice(-(ctx*2));
+  }
   busy=true;$("btnSend").disabled=true;
   const ai=addMsg("ai","");ai.wrap.classList.add("typing");
   let acc="",reasoning="";
@@ -389,6 +412,7 @@ $("settings").addEventListener("click",e=>{if(e.target===$("settings"))$("settin
 $("cfgTemp").oninput=()=>$("tempVal").textContent=$("cfgTemp").value;
 $("cfgCtx").oninput=()=>$("ctxVal").textContent=$("cfgCtx").value;
 $("rowReasoning").onclick=()=>{const on=!isOn("swReasoning");setSwitch("swReasoning",on);$("reasonModelField").style.display=on?"block":"none"};
+$("rowMemory").onclick=()=>{const on=!isOn("swMemory");setSwitch("swMemory",on);$("ctxField").style.display=on?"none":"block"};
 $("rowVoice").onclick=()=>{setSwitch("swVoice",!isOn("swVoice"))};
 $("btnSave").onclick=()=>{saveCfg();$("settings").classList.remove("show");addMsg("ai","配置保存成功喵～ 🐱 现在可以跟喵酱聊天啦！")};
 $("btnClear").onclick=()=>{
@@ -397,7 +421,7 @@ $("btnClear").onclick=()=>{
   addMsg("ai","好的喵，重新开始吧～ 喵酱一直都在哦！");
 };
 loadCfg();
-if(cfg.api_key)addMsg("ai","喵～主人好！我是喵酱 🐱 v0.3.0 美化版：\n✨ 猫耳标题 · 漂浮猫爪背景 · 渐变气泡\n🧠 深度思考 · 🔉 语音朗读 · 💬 记忆可调\n都在 ⚙️ 设置里哦！");
+if(cfg.api_key)addMsg("ai","喵～主人好！我是喵酱 🐱 v0.4.0：♾️ 无限记忆已开启，喵酱会一直记住我们的对话！\n✨ 猫耳标题 · 漂浮猫爪背景 · 渐变气泡\n🧠 深度思考 · 🔉 语音朗读 · 🎤 语音输入\n都在 ⚙️ 设置里哦！");
 </script>
 </body>
 </html>

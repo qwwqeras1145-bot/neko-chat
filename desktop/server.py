@@ -44,7 +44,8 @@ DEFAULT_CONFIG = {
     "model": "deepseek-chat",
     "prompt": DEFAULT_PROMPT,
     "temperature": 0.8,
-    "context_len": 10,
+    "unlimited_memory": True,  # 无限记忆（默认全记住，不截断）
+    "context_len": 10,         # 关闭无限记忆时的记忆轮数
     "voice": False,
     "reasoning": False,
     "reasoning_model": "",
@@ -79,11 +80,13 @@ def save_config(cfg):
 
 # ---------------- 流式聊天（OpenAI 兼容） ----------------
 def build_messages(cfg, history):
-    clen = int(cfg.get("context_len", 10) or 0)
-    if clen > 0 and len(history) > clen * 2:
-        history = history[-(clen * 2):]
-    elif clen == 0:
-        history = history[-1:] if history else []
+    # 无限记忆：不截断，发送全部对话历史
+    if not cfg.get("unlimited_memory"):
+        clen = int(cfg.get("context_len", 10) or 0)
+        if clen > 0 and len(history) > clen * 2:
+            history = history[-(clen * 2):]
+        elif clen == 0:
+            history = history[-1:] if history else []
     messages = [{"role": "system", "content": cfg.get("prompt") or DEFAULT_PROMPT}]
     messages.extend(history)
     return messages
@@ -335,8 +338,15 @@ border-radius:14px;padding:11px 16px;font-size:13px;line-height:1.6;margin-botto
       <label>推理模型（留空自动匹配厂商）</label>
       <input id="cfgReasonModel" placeholder="如 deepseek-reasoner / o3-mini">
     </div>
-    <div class="field">
-      <label>💬 上下文记忆：<span id="ctxVal">10</span> 轮（0 = 每句独立）</label>
+    <div class="toggle-row" id="rowMemory">
+      <div>
+        <div class="t-label">♾️ 无限记忆</div>
+        <div class="t-desc">记住全部对话，随时聊起以前的事</div>
+      </div>
+      <div class="switch" id="swMemory"></div>
+    </div>
+    <div class="field" id="ctxField" style="display:none">
+      <label>💬 记忆轮数：<span id="ctxVal">10</span> 轮（0 = 每句独立）</label>
       <input id="cfgCtx" type="range" min="0" max="30" step="1" value="10" style="width:100%">
     </div>
     <div class="toggle-row" id="rowVoice">
@@ -392,6 +402,7 @@ async function loadCfg(){
   $("cfgPrompt").value=cfg.prompt||"";
   $("cfgTemp").value=cfg.temperature||0.8;$("tempVal").textContent=cfg.temperature||0.8;
   $("cfgCtx").value=cfg.context_len||10;$("ctxVal").textContent=cfg.context_len||10;
+  setSwitch("swMemory",cfg.unlimited_memory!==false);$("ctxField").style.display=cfg.unlimited_memory!==false?"none":"block";
   setSwitch("swReasoning",!!cfg.reasoning);$("reasonModelField").style.display=cfg.reasoning?"block":"none";
   setSwitch("swVoice",!!cfg.voice);
   const cur=cfg.base_url||"";
@@ -526,12 +537,13 @@ $("settings").addEventListener("click",e=>{if(e.target===$("settings"))$("settin
 $("cfgTemp").oninput=()=>$("tempVal").textContent=$("cfgTemp").value;
 $("cfgCtx").oninput=()=>$("ctxVal").textContent=$("cfgCtx").value;
 $("rowReasoning").onclick=()=>{const on=!isOn("swReasoning");setSwitch("swReasoning",on);$("reasonModelField").style.display=on?"block":"none"};
+$("rowMemory").onclick=()=>{const on=!isOn("swMemory");setSwitch("swMemory",on);$("ctxField").style.display=on?"none":"block"};
 $("rowVoice").onclick=()=>{setSwitch("swVoice",!isOn("swVoice"))};
 $("btnSave").onclick=async()=>{
   try{
     cfg={base_url:$("cfgBaseUrl").value.trim(),api_key:$("cfgApiKey").value.trim(),
          model:$("cfgModel").value.trim(),prompt:$("cfgPrompt").value,
-         temperature:parseFloat($("cfgTemp").value),context_len:parseInt($("cfgCtx").value),
+         temperature:parseFloat($("cfgTemp").value),unlimited_memory:isOn("swMemory"),context_len:parseInt($("cfgCtx").value),
          voice:isOn("swVoice"),reasoning:isOn("swReasoning"),reasoning_model:$("cfgReasonModel").value.trim()};
     await api("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(cfg)});
     $("setupHint").style.display="none";
@@ -545,7 +557,7 @@ $("btnClear").onclick=async()=>{
   addMsg("ai","好的喵，喵酱已经把之前的话都忘掉了～ 我们重新开始吧！");
 };
 loadCfg();
-addMsg("ai","喵～主人好！我是喵酱 🐱 v0.3.0 美化版上线啦！\n✨ 猫耳标题 · 漂浮猫爪背景 · 渐变气泡\n🧠 深度思考 · 🔉 语音朗读 · 🎤 语音输入\n💬 记忆长度可调 · 🏭 厂商切换/自定义 API\n右上角 ⚙️ 设置里都可以调整哦！");
+addMsg("ai","喵～主人好！我是喵酱 🐱 v0.4.0：♾️ 无限记忆已开启，喵酱会一直记住我们的对话！\n✨ 猫耳标题 · 漂浮猫爪背景 · 渐变气泡\n🧠 深度思考 · 🔉 语音朗读 · 🎤 语音输入\n右上角 ⚙️ 设置里都可以调整哦！");
 </script>
 </body>
 </html>"""
@@ -614,7 +626,7 @@ class Handler(BaseHTTPRequestHandler):
 def start():
     srv = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     print("=" * 46)
-    print("   🐱  喵酱 Chat v0.3.0 已启动")
+    print("   🐱  喵酱 Chat v0.4.0 已启动")
     print(f"   🌐  打开: http://127.0.0.1:{PORT}")
     print("       手机同 WiFi 访问: http://<本机IP>:%d" % PORT)
     print("       关闭本窗口即退出。")
