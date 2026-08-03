@@ -577,8 +577,12 @@ function toast(msg){
 function pickAvatar(){
   const inp=document.createElement("input");
   inp.type="file";inp.accept="image/*";
+  inp.style.cssText="position:fixed;left:-9999px;top:0;opacity:0";
+  document.body.appendChild(inp);
   inp.onchange=()=>{
-    const f=inp.files[0];if(!f)return;
+    const f=inp.files[0];
+    inp.remove();
+    if(!f)return;
     const rd=new FileReader();
     rd.onload=e=>{
       const img=new Image();
@@ -596,6 +600,7 @@ function pickAvatar(){
     };
     rd.readAsDataURL(f);
   };
+  try{inp.oncancel=()=>inp.remove()}catch(e){}
   inp.click();
 }
 function clearAvatar(){cfg.avatar="";$("avatarPrev").src="";saveSettings();toast("已恢复默认头像")}
